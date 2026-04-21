@@ -1,0 +1,100 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// TABEL BARANG (MASTER PRODUCT)
+// ==========================================
+model Product {
+  id         String  @id @default(cuid())
+  name       String
+  imageUrl   String?
+  stockAlert Int     @default(0)
+  stock      Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // RELASI
+  units            Unit[]
+  transactionItems TransactionItem[] 
+}
+
+// ==========================================
+// TABEL SATUAN (UNIT & HARGA)
+// ==========================================
+model Unit {
+  id         String @id @default(cuid())
+  name       String // Contoh: Dus, Pak, Renceng, Pcs
+  conversion Int    // Isi per satuan dasar
+  price      Int    // Harga Jual
+  
+  // --- TAMBAHAN BARU: Harga Modal ---
+  buyPrice   Int    @default(0) // Harga Beli/Modal (Penting untuk Laba/Rugi)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==========================================
+// TABEL TRANSAKSI (RIWAYAT PENJUALAN)
+// ==========================================
+model Transaction {
+  id            String  @id @default(cuid())
+  invoiceNumber String  @unique 
+  customerName  String? @default("Umum")
+  totalAmount   Int     
+  payAmount     Int     
+  changeAmount  Int     
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items TransactionItem[]
+}
+
+// ==========================================
+// DETAIL BARANG YANG DIBELI
+// ==========================================
+model TransactionItem {
+  id            String @id @default(cuid())
+  transactionId String
+  productId     String
+  unitName      String 
+  quantity      Int    
+  priceAtTime   Int    // Harga jual saat transaksi
+  
+  // --- TAMBAHAN BARU: Catat modal saat transaksi ---
+  buyPriceAtTime Int   @default(0) // Menyimpan modal saat itu agar laporan laba tetap akurat meski harga modal berubah di masa depan
+  
+  subtotal      Int    
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  product     Product     @relation(fields: [productId], references: [id])
+}
+
+// ==========================================
+// --- TABEL BARU: PENGELUARAN OPERASIONAL ---
+// ==========================================
+model Expense {
+  id          String   @id @default(cuid())
+  title       String   // Contoh: Bayar Listrik, Gaji Kuli, Bensin
+  amount      Int      // Nominal uang keluar
+  category    String   // Contoh: Operasional, Gaji, Lain-lain
+  note        String?  // Catatan tambahan
+  date        DateTime @default(now())
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
