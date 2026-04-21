@@ -7,21 +7,21 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
 }
 
 // ==========================================
 // TABEL BARANG (MASTER PRODUCT)
 // ==========================================
 model Product {
-  id         String  @id @default(cuid())
-  name       String
-  imageUrl   String?
-  stockAlert Int     @default(0)
-  stock      Int     @default(0)
+  id          String   @id @default(cuid())
+  name        String
+  imageUrl    String?
+  stockAlert  Int      @default(0)
+  stock       Int      @default(0)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // RELASI
   units            Unit[]
@@ -32,69 +32,85 @@ model Product {
 // TABEL SATUAN (UNIT & HARGA)
 // ==========================================
 model Unit {
-  id         String @id @default(cuid())
-  name       String // Contoh: Dus, Pak, Renceng, Pcs
-  conversion Int    // Isi per satuan dasar
-  price      Int    // Harga Jual
-  
-  // --- TAMBAHAN BARU: Harga Modal ---
-  buyPrice   Int    @default(0) // Harga Beli/Modal (Penting untuk Laba/Rugi)
+  id          String   @id @default(cuid())
+  name        String   // Contoh: Dus, Pak, Renceng, Pcs
+  conversion  Int      // Isi per satuan dasar
+  price       Int      // Harga Jual
+  buyPrice    Int      @default(0) // Harga Beli/Modal
 
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // ==========================================
 // TABEL TRANSAKSI (RIWAYAT PENJUALAN)
 // ==========================================
 model Transaction {
-  id            String  @id @default(cuid())
-  invoiceNumber String  @unique 
-  customerName  String? @default("Umum")
-  totalAmount   Int     
-  payAmount     Int     
-  changeAmount  Int     
+  id            String   @id @default(cuid())
+  invoiceNumber String   @unique 
+  customerName  String?  @default("Umum")
+  totalAmount   Int      
+  payAmount     Int      
+  changeAmount  Int      
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  items TransactionItem[]
+  items         TransactionItem[]
 }
 
 // ==========================================
 // DETAIL BARANG YANG DIBELI
 // ==========================================
 model TransactionItem {
-  id            String @id @default(cuid())
-  transactionId String
-  productId     String
-  unitName      String 
-  quantity      Int    
-  priceAtTime   Int    // Harga jual saat transaksi
-  
-  // --- TAMBAHAN BARU: Catat modal saat transaksi ---
-  buyPriceAtTime Int   @default(0) // Menyimpan modal saat itu agar laporan laba tetap akurat meski harga modal berubah di masa depan
-  
-  subtotal      Int    
+  id              String      @id @default(cuid())
+  transactionId   String
+  productId       String
+  unitName        String 
+  quantity        Int     
+  priceAtTime     Int         // Harga jual saat transaksi
+  buyPriceAtTime  Int         @default(0) // Catat modal saat transaksi
+  subtotal        Int     
 
-  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  product     Product     @relation(fields: [productId], references: [id])
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  product         Product     @relation(fields: [productId], references: [id])
 }
 
 // ==========================================
-// --- TABEL BARU: PENGELUARAN OPERASIONAL ---
+// TABEL KARYAWAN (EMPLOYEE)
+// ==========================================
+model Employee {
+  id          String    @id @default(cuid())
+  name        String
+  position    String?   // Jabatan (misal: Kasir, Sopir, Kuli)
+  phone       String?
+  baseSalary  Int       @default(0)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // RELASI KE PENGELUARAN (Untuk catat siapa yang terima gaji/uang)
+  expenses    Expense[]
+}
+
+// ==========================================
+// TABEL PENGELUARAN OPERASIONAL
 // ==========================================
 model Expense {
   id          String   @id @default(cuid())
-  title       String   // Contoh: Bayar Listrik, Gaji Kuli, Bensin
+  title       String   // Contoh: Bayar Listrik, Gaji Kuli
   amount      Int      // Nominal uang keluar
   category    String   // Contoh: Operasional, Gaji, Lain-lain
   note        String?  // Catatan tambahan
   date        DateTime @default(now())
   
+  // RELASI KE KARYAWAN (OPSIONAL)
+  employeeId  String?
+  employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
