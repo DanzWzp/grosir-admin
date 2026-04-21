@@ -3,10 +3,13 @@
 import db from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
-// Mengambil semua pengeluaran
+// Mengambil semua pengeluaran (Sekalian ambil data nama karyawan)
 export async function getExpenses() {
   try {
     return await db.expense.findMany({
+      include: {
+        employee: true, // Tambahkan ini agar nama karyawan muncul di tabel
+      },
       orderBy: { date: "desc" },
     });
   } catch (error) {
@@ -21,6 +24,7 @@ export async function createExpenseAction(data: {
   amount: number;
   category: string;
   note?: string;
+  employeeId?: string; // Tambahkan field ini
 }) {
   try {
     await db.expense.create({
@@ -29,6 +33,15 @@ export async function createExpenseAction(data: {
         amount: Number(data.amount),
         category: data.category,
         note: data.note,
+        // LOGIKA RELASI KARYAWAN:
+        // Jika employeeId ada dan bukan string kosong, hubungkan ke tabel employee
+        ...(data.employeeId && data.employeeId !== ""
+          ? {
+              employee: {
+                connect: { id: data.employeeId },
+              },
+            }
+          : {}),
       },
     });
 
@@ -36,7 +49,11 @@ export async function createExpenseAction(data: {
     return { success: true, message: "Pengeluaran berhasil dicatat!" };
   } catch (error) {
     console.error("Gagal mencatat pengeluaran:", error);
-    return { success: false, message: "Gagal menyimpan pengeluaran." };
+    // Tampilkan error lebih detail di console Vercel
+    return {
+      success: false,
+      message: "Gagal menyimpan pengeluaran. Cek relasi database.",
+    };
   }
 }
 
